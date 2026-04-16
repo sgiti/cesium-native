@@ -860,6 +860,32 @@ void computeDistances(
       });
 }
 
+double minimumDistance(const std::vector<double>& distances) {
+  if (distances.empty()) {
+    return std::numeric_limits<double>::max();
+  }
+
+  return *std::min_element(distances.begin(), distances.end());
+}
+
+uint32_t getTargetDepthFromDistance(
+    const TilesetOptions& options,
+    double distance) noexcept {
+  if (distance <= options.distanceBandThresholds[0]) {
+    return options.fixedLodDepthsByDistanceBand[0];
+  }
+
+  if (distance <= options.distanceBandThresholds[1]) {
+    return options.fixedLodDepthsByDistanceBand[1];
+  }
+
+  if (distance <= options.distanceBandThresholds[2]) {
+    return options.fixedLodDepthsByDistanceBand[2];
+  }
+
+  return options.fixedLodDepthsByDistanceBand[3];
+}
+
 } // namespace
 
 double Tileset::_computeSse(
@@ -1002,8 +1028,16 @@ Tileset::TraversalDetails Tileset::_visitTileIfNeeded(
     ++result.culledTilesVisited;
   }
 
-  double tileSse = this->_computeSse(frameState.frustums, tile, distances);
+  const double tileSse = this->_computeSse(frameState.frustums, tile, distances);
   bool meetsSse = this->_meetsSseThreshold(tileSse, cullResult.culled);
+
+  if (this->_options.enableDistanceBasedLod) {
+    const double closestDistance = minimumDistance(distances);
+    const uint32_t targetDepth =
+        getTargetDepthFromDistance(this->_options, closestDistance);
+    meetsSse = depth >= targetDepth;
+  }
+
 
   TraversalDetails details = this->_visitTile(
       frameState,
