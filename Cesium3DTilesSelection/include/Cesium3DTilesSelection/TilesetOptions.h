@@ -97,6 +97,40 @@ struct CESIUM3DTILESSELECTION_API TilesetOptions {
   double maximumScreenSpaceError = 16.0;
 
   /**
+   * @brief Distance thresholds (in meters) used by distance-based LOD
+   * selection.
+   *
+   * When {@link enableDistanceBasedLod} is true, maximumScreenSpaceError is
+   * ignored and these thresholds determine when to switch LOD bands.
+   * Distances should be in ascending order:
+   * distanceBandThresholds[0] < distanceBandThresholds[1] <
+   * distanceBandThresholds[2].
+   */
+  std::array<double, 3> distanceBandThresholds = {250.0, 1000.0, 4000.0};
+
+  /**
+   * @brief Fixed tree depths selected for each distance band.
+   *
+   * The values correspond to:
+   * - fixedLodDepthsByDistanceBand[0]: camera distance <= distanceBandThresholds[0]
+   * - fixedLodDepthsByDistanceBand[1]: distanceBandThresholds[0] < camera
+   *   distance <= distanceBandThresholds[1]
+   * - fixedLodDepthsByDistanceBand[2]: distanceBandThresholds[1] < camera
+   *   distance <= distanceBandThresholds[2]
+   * - fixedLodDepthsByDistanceBand[3]: camera distance > distanceBandThresholds[2]
+   */
+  std::array<uint32_t, 4> fixedLodDepthsByDistanceBand = {16, 12, 8, 4};
+
+  /**
+   * @brief Enable fixed LOD-by-distance selection and ignore SSE thresholding.
+   *
+   * When true, a tile refines until it reaches a fixed depth selected from
+   * fixedLodDepthsByDistanceBand according to distanceBandThresholds.
+   */
+  bool enableDistanceBasedLod = true;
+
+
+  /**
    * @brief The maximum number of tiles that may simultaneously be in the
    * process of loading.
    */
