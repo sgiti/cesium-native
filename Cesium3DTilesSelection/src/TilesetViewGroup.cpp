@@ -49,19 +49,12 @@ void TilesetViewGroup::addToLoadQueue(
   Tile* pTile = task.pTile;
   CESIUM_ASSERT(pTile != nullptr);
 
+
   // Assert that this tile hasn't been added to a queue already.
-  CESIUM_ASSERT(
-      std::find_if(
-          this->_workerThreadLoadQueue.begin(),
-          this->_workerThreadLoadQueue.end(),
-          [&](const TileLoadTask& task) { return task.pTile == pTile; }) ==
-      this->_workerThreadLoadQueue.end());
-  CESIUM_ASSERT(
-      std::find_if(
-          this->_mainThreadLoadQueue.begin(),
-          this->_mainThreadLoadQueue.end(),
-          [&](const TileLoadTask& task) { return task.pTile == pTile; }) ==
-      this->_mainThreadLoadQueue.end());
+
+  const auto [_, inserted] = this->_queuedTilesDebug.emplace(pTile);
+  CESIUM_ASSERT(inserted);
+
 
   if (pTile->needsWorkerThreadLoading(pModifier.get())) {
     this->_workerThreadLoadQueue.emplace_back(task);
@@ -90,6 +83,18 @@ size_t TilesetViewGroup::restoreTileLoadQueueCheckpoint(
   CESIUM_ASSERT(this->_workerThreadLoadQueue.size() >= checkpoint.workerThread);
   CESIUM_ASSERT(this->_mainThreadLoadQueue.size() >= checkpoint.mainThread);
 
+
+  for (size_t i = checkpoint.workerThread;
+       i < this->_workerThreadLoadQueue.size();
+       ++i) {
+    this->_queuedTilesDebug.erase(this->_workerThreadLoadQueue[i].pTile);
+  }
+  for (size_t i = checkpoint.mainThread; i < this->_mainThreadLoadQueue.size();
+       ++i) {
+    this->_queuedTilesDebug.erase(this->_mainThreadLoadQueue[i].pTile);
+  }
+
+
   size_t before =
       this->_workerThreadLoadQueue.size() + this->_mainThreadLoadQueue.size();
 
@@ -115,6 +120,9 @@ void TilesetViewGroup::startNewFrame(
     const TilesetFrameState& /*frameState*/) {
   this->_workerThreadLoadQueue.clear();
   this->_mainThreadLoadQueue.clear();
+
+  this->_queuedTilesDebug.clear();
+
   this->_tilesAlreadyLoadingOrUnloading = 0;
   this->_traversalState.beginTraversal();
 
@@ -252,6 +260,9 @@ const Tile* TilesetViewGroup::getNextTileToLoadInWorkerThread() {
 
   Tile* pResult = this->_workerThreadLoadQueue.back().pTile;
   this->_workerThreadLoadQueue.pop_back();
+
+  this->_queuedTilesDebug.erase(pResult);
+
   return pResult;
 }
 
@@ -266,6 +277,9 @@ const Tile* TilesetViewGroup::getNextTileToLoadInMainThread() {
 
   Tile* pResult = this->_mainThreadLoadQueue.back().pTile;
   this->_mainThreadLoadQueue.pop_back();
+
+  this->_queuedTilesDebug.erase(pResult);
+
   return pResult;
 }
 
