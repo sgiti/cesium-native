@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Cesium3DTilesSelection {
@@ -254,6 +255,9 @@ private:
   TraversalState _traversalState;
   CesiumUtility::CreditReferencer _previousFrameCredits;
   CesiumUtility::CreditReferencer _currentFrameCredits;
+
+  std::unordered_set<const Tile*> _queuedTilesDebug;
+
 };
 
 } // namespace Cesium3DTilesSelection
